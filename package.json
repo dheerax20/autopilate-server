@@ -2,9 +2,10 @@
   "name": "visual-agent-builder-server",
   "version": "1.0.0",
   "description": "Backend for Visual Agent Builder",
-  "main": "src/index.ts",
+  "main": "dist/src/index.js",
   "scripts": {
-    "start": "ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/src/index.js",
     "dev": "nodemon src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
