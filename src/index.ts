@@ -53,8 +53,10 @@ import { operatorsRouter } from '../routes/operators';
 import { templatesRouter } from '../routes/templates';
 import { schedulesRouter } from '../routes/schedules';
 import { credentialsRouter } from '../routes/credentials';
+import { credentialHelperRouter } from '../routes/credential-helper';
 import { discoverRouter } from '../routes/discover';
 import { workspacesRouter } from '../routes/workspaces';
+import { authRouter } from '../routes/auth';
 
 // Middleware
 import { requestLogger } from './middleware/request-logger';
@@ -70,6 +72,7 @@ import {
   configureNodeBodySchema,
 } from './middleware/validation';
 import { apiKeyAuth } from './middleware/auth';
+import { userAuth } from './middleware/user-auth';
 import { slidingWindowRateLimiter } from './middleware/rate-limiter';
 import { webhookVerify } from './middleware/webhook-verify';
 
@@ -143,8 +146,24 @@ app.use(requestLogger);
 // Rate limiting — sliding window, 100 req/min per IP
 app.use('/api/', slidingWindowRateLimiter({ windowMs: 60_000, maxRequests: 100 }));
 
-// API key authentication — all /api/ routes except /api/health
+// Tighter rate limit on the login endpoint — prevents brute-force attempts
+// from blowing past the per-account lockout by rotating IPs slowly.
+app.use(
+  '/api/auth/login',
+  slidingWindowRateLimiter({ windowMs: 60_000, maxRequests: 10 })
+);
+
+// API key authentication — all /api/ routes except /api/health and /api/auth/login
 app.use('/api/', apiKeyAuth);
+
+// User bearer-token authentication. Attaches req.user when a valid token is
+// present. Becomes mandatory when AUTOPILATE_REQUIRE_USER_AUTH=true.
+app.use('/api/', userAuth());
+
+// Static login page — served from server/public/login.html
+app.get('/login', (_req, res) => {
+  res.sendFile(path.resolve(__dirname, '..', 'public', 'login.html'));
+});
 
 // Stricter rate limit for AI-powered endpoints (30/min supports wizards with many nodes)
 const aiLimiter = slidingWindowRateLimiter({ windowMs: 60_000, maxRequests: 30 });
@@ -504,11 +523,13 @@ app.get('/api/health', async (_req, res) => {
 
 // --- Systems (deployment registry) ---
 
+app.use('/api/auth', authRouter);
 app.use('/api/systems', systemsRouter);
 app.use('/api/deploy', deployRouter);
 app.use('/api/operators', operatorsRouter);
 app.use('/api/schedules', schedulesRouter);
 app.use('/api/credentials', credentialsRouter);
+app.use('/api/credential-helper', credentialHelperRouter);
 app.use('/api/discover', discoverRouter);
 app.use('/api/workspaces', workspacesRouter);
 // Schedule mutation routes mounted under /api/systems/:slug/schedule

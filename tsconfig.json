@@ -2,31 +2,10 @@
   "compilerOptions": {
     "target": "es2016",
     "module": "commonjs",
-    "rootDir": ".",
     "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true
-  },
-  "include": [
-    "src/**/*",
-    "agents/**/*",
-    "config/**/*",
-    "lib/**/*",
-    "mcp/**/*",
-    "routes/**/*",
-    "services/**/*",
-    "shared/**/*",
-    "socket/**/*",
-    "types/**/*",
-    "watcher/**/*",
-    "db.ts",
-    "cli-runner.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "sandbox"
-  ]
+  }
 }

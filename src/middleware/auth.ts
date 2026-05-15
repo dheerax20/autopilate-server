@@ -17,6 +17,9 @@ const SKIP_PATHS = [
   '/configure-workflow',
   '/configure-node',
   '/metrics',
+  // Auth login must be reachable without the admin X-API-Key — that's the
+  // whole point. Logout/me/register still go through the api key check.
+  '/auth/login',
 ];
 
 // Paths that skip auth only for GET requests (browsing is public, mutations need auth)

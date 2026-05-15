@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign in — AUTOPILATE</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #e2e8f0;
+      }
+      .card {
+        width: 100%;
+        max-width: 380px;
+        background: #0b1120;
+        border: 1px solid #1e293b;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      }
+      h1 { margin: 0 0 4px; font-size: 22px; }
+      p.sub { margin: 0 0 24px; font-size: 13px; color: #94a3b8; }
+      label { display: block; font-size: 13px; margin: 12px 0 6px; color: #cbd5e1; }
+      input {
+        width: 100%;
+        padding: 10px 12px;
+        background: #111827;
+        border: 1px solid #334155;
+        border-radius: 6px;
+        color: #f1f5f9;
+        font-size: 14px;
+      }
+      input:focus { outline: none; border-color: #6366f1; }
+      button {
+        width: 100%;
+        margin-top: 20px;
+        padding: 11px;
+        background: #4f46e5;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      button:hover:not(:disabled) { background: #4338ca; }
+      button:disabled { background: #475569; cursor: not-allowed; }
+      .alert {
+        margin-top: 18px;
+        padding: 10px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        display: none;
+      }
+      .alert.error { background: #450a0a; border: 1px solid #7f1d1d; color: #fecaca; }
+      .alert.warn { background: #422006; border: 1px solid #92400e; color: #fed7aa; }
+      .alert.info { background: #082f49; border: 1px solid #075985; color: #bae6fd; }
+      .alert.success { background: #052e16; border: 1px solid #166534; color: #bbf7d0; }
+      .alert.show { display: block; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Sign in</h1>
+      <p class="sub">Use your AUTOPILATE email and password.</p>
+
+      <form id="login-form" autocomplete="on">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required autocomplete="email" autofocus />
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required autocomplete="current-password" />
+
+        <button id="submit" type="submit">Sign in</button>
+        <div id="alert" class="alert" role="alert" aria-live="polite"></div>
+      </form>
+    </main>
+
+    <script>
+      (function () {
+        const form = document.getElementById('login-form');
+        const button = document.getElementById('submit');
+        const alertEl = document.getElementById('alert');
+
+        function showAlert(message, kind) {
+          alertEl.textContent = message;
+          alertEl.className = 'alert show ' + (kind || 'error');
+        }
+        function hideAlert() {
+          alertEl.className = 'alert';
+        }
+
+        form.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          hideAlert();
+          button.disabled = true;
+          button.textContent = 'Signing in...';
+
+          const email = document.getElementById('email').value.trim();
+          const password = document.getElementById('password').value;
+
+          try {
+            const res = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: email, password: password }),
+            });
+
+            const data = await res.json().catch(function () { return {}; });
+
+            if (res.ok && data.token) {
+              try { localStorage.setItem('autopilate_token', data.token); } catch (_) {}
+              showAlert('Signed in. Redirecting...', 'success');
+              const next = new URLSearchParams(window.location.search).get('next') || '/';
+              setTimeout(function () { window.location.href = next; }, 400);
+              return;
+            }
+
+            // Map error codes to UI tone
+            if (data.code === 'AUTH_ACCOUNT_LOCKED') {
+              showAlert(data.error || 'Account locked. Try again later.', 'warn');
+            } else if (data.code === 'AUTH_INVALID_CREDENTIALS') {
+              showAlert(data.error || 'Invalid email or password.', 'error');
+            } else if (res.status === 400 && data.details && data.details.length) {
+              showAlert(data.details.map(function (d) { return d.message; }).join(', '), 'error');
+            } else {
+              showAlert(data.error || ('Login failed (' + res.status + ')'), 'error');
+            }
+          } catch (err) {
+            showAlert('Network error. Please try again.', 'error');
+          } finally {
+            button.disabled = false;
+            button.textContent = 'Sign in';
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

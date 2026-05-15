@@ -21,6 +21,16 @@ export function getRedisPublisher(): Redis {
   return redisPublisher;
 }
 
+/**
+ * General-purpose Redis client used by services that need read/write
+ * commands (e.g. auth lockouts, session tokens). Reuses the same lazy
+ * connection as the publisher — ioredis clients are full duplex unless
+ * placed in subscribe mode, so a single instance is fine.
+ */
+export function getRedisClient(): Redis {
+  return getRedisPublisher();
+}
+
 export async function shutdownRedisPublisher(): Promise<void> {
   if (redisPublisher) {
     await redisPublisher.quit();
